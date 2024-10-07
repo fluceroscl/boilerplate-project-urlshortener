@@ -46,22 +46,23 @@ app.post('/api/shorturl', function(req, res) {
   }
 });
 
-// Simulación de una base de datos de URLs cortas
-const urlDatabase = {
-    'localhost': 'http://localhost:3000', // Ejemplo de URL original
-    // Agrega más pares short_url: original_url según sea necesario
-};
-
-// Función para encontrar la URL original
-function findOriginalUrl(shortUrl) {
-    return urlDatabase[shortUrl]; // Devuelve la URL original si existe
-}
 
 // Ruta para redirigir a la URL original
-app.get('/api/shorturl/:short_url', (req, res) => {
+app.get('/api/shorturl/:short_url?', (req, res) => {
     const shortUrl = req.params.short_url;
     console.log(shortUrl);
-    res.redirect('/');
+    try {
+      const urlObj = new URL(shortUrl);
+      // Verificar la URL con dns.lookup
+      dns.lookup(urlObj.hostname, (err) => {
+        if (err) {
+          return res.redirect('/');
+        }        
+        res.redirect(shortUrl);
+      });
+    } catch (error) {
+      res.redirect('/');
+    }
 });
 
 app.listen(port, function() {
