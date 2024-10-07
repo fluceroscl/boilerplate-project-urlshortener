@@ -42,7 +42,7 @@ app.post('/api/shorturl', function(req, res) {
       res.json({ original_url: url, short_url: shortUrlId }); // Ejemplo de respuesta
     });
   } catch (error) {
-    res.json({ error: 'URL inválida' });
+    res.json({ error: 'invalid url' });
   }
 });
 
@@ -60,13 +60,8 @@ function findOriginalUrl(shortUrl) {
 // Ruta para redirigir a la URL original
 app.get('/api/shorturl/:short_url', (req, res) => {
     const shortUrl = req.params.short_url;
-    const originalUrl = findOriginalUrl(shortUrl);
-
-    if (originalUrl) {
-        res.redirect(originalUrl); // Redirige a la URL original
-    } else {
-        res.status(404).send('URL no encontrada'); // Manejo de error si no se encuentra la URL
-    }
+    console.log(shortUrl);
+    res.redirect('/');
 });
 
 app.listen(port, function() {
