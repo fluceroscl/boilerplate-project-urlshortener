@@ -2,68 +2,65 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const dns = require('dns');
+const { promisify } = require('util');
 const app = express();
 
-// Basic Configuration
+// Configuración básica
 const port = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json()); // Middleware para manejar JSON
-app.use(express.urlencoded({ extended: true })); // Middleware para manejar datos URL-encoded
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/public', express.static(`${process.cwd()}/public`));
 
-app.get('/', function(req, res) {
+const dnsLookup = promisify(dns.lookup);
+
+app.get('/', (req, res) => {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
-// Your first API endpoint
-app.get('/api/hello', function(req, res) {
-  res.json({ greeting: 'hello API' });
-});
+const urlStore = new Map();
 
-const urlStore = {}; // Objeto para almacenar las URLs acortadas
+const generateShortUrl = () => Math.floor(Math.random() * 10000).toString();
 
-// Endpoint para acortar URL
-app.post('/api/shorturl', function(req, res) {
-  const url = req.body.url;
+const isValidUrl = async (url) => {
+  try {
+    const urlObj = new URL(url);
+    await dnsLookup(urlObj.hostname);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+app.post('/api/shorturl', async (req, res) => {
+  const { url } = req.body;
   console.log(url);
-  try {
-    const urlObj = new URL(url);
-    dns.lookup(urlObj.hostname, (err) => {
-      if (err) {
-        return res.json({ error: 'invalid url' });
-      }
-      const shortUrlId = Math.floor(Math.random() * 10000); 
-      urlStore[shortUrlId] = url; 
-      res.json({ original_url: url, short_url: shortUrlId }); 
-    });
-  } catch (error) {
-    res.json({ error: 'invalid url' });
+
+  if (await isValidUrl(url)) {
+    const shortUrlId = generateShortUrl();
+    urlStore.set(shortUrlId, url);
+    res.json({ original_url: url, short_url: shortUrlId });
+  } else {
+    res.json({ error: 'URL inválida' });
   }
 });
 
-// Ruta para redirigir a la URL original
-app.get('/api/shorturl/:url(*)', (req, res) => { // Permite URLs completas como parámetro
-  const url = decodeURIComponent(req.params.url); // Decodificar la URL
-  console.log('SHORT URL: ', url);
+app.get('/api/shorturl/:url(*)', async (req, res) => {
+  const url = decodeURIComponent(req.params.url);
+  console.log('URL corta:', url);
 
-  if (urlStore[url]) {
-    return res.redirect(urlStore[url]);
+  if (urlStore.has(url)) {
+    return res.redirect(urlStore.get(url));
   }
 
-  try {
-    const urlObj = new URL(url);
-    dns.lookup(urlObj.hostname, (err) => {
-      if (err) return res.redirect('/');
-      return res.redirect(url); 
-    });
-  } catch (error) {
-      return res.redirect('/');
+  if (await isValidUrl(url)) {
+    return res.redirect(url);
   }
+
+  res.redirect('/');
 });
 
-app.listen(port, function() {
-  console.log(`Listening on port ${port}`);
+app.listen(port, () => {
+  console.log(`Servidor escuchando en el puerto ${port}`);
 });
-//https://3000-fluceroscl-boilerplatep-7eiw6mf0go0.ws-us116.gitpod.io/api/shorturl/http://www.google.com
