@@ -48,23 +48,23 @@ app.post('/api/shorturl', function(req, res) {
 
 
 // Ruta para redirigir a la URL original
-app.get('/api/shorturl/:short_url?', (req, res) => {
-    const shortUrl = req.params.short_url;
-    console.log(shortUrl);
-    try {
-      const urlObj = new URL(shortUrl);
-      // Verificar la URL con dns.lookup
-      dns.lookup(urlObj.hostname, (err) => {
-        if (err) {
-          return res.redirect('/');
-        }        
-        res.redirect(shortUrl);
-      });
-    } catch (error) {
-      res.redirect('/');
-    }
+app.get('/api/shorturl/:url(*)', (req, res) => { // Permite URLs completas como parámetro
+  const url = decodeURIComponent(req.params.url); // Decodificar la URL
+  console.log('SHORT URL: ', url);
+  try {
+    const urlObj = new URL(url);
+
+    dns.lookup(urlObj.hostname, (err) => {
+      if (err) return res.redirect('/');
+      return res.redirect(url); 
+    });
+  } catch (error) {
+      return res.redirect('/');
+  }
 });
+
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
 });
+//https://3000-fluceroscl-boilerplatep-7eiw6mf0go0.ws-us116.gitpod.io/api/shorturl/http://www.google.com
